@@ -585,7 +585,17 @@ InlineLexer.prototype.output = function(src) {
         src = src.substring(cap[0].length);
         this.inLink = true;
         var inside = cap[0].substring(2, cap[0].length -2).split(':');
-        out += '<b>Param1: </b>' + inside[0] + ' <b>Param2: </b>' + inside[1];
+        var type = inside[0];
+        var identifier = inside[1];
+        if (type === 'user') {
+            out += '<a href="https://osf.io/' + identifier + '"> OSF User </a>';
+        } else if (type === 'project') {
+            out += '<a href="https://osf.io/' + identifier + '"> OSF Project </a>';
+        } else if (type === 'youtube') {
+            out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + identifier + '" frameborder="0" allowfullscreen></iframe>'
+        } else {
+            out += '<b>Param1: </b>' + type + ' <b>Param2: </b>' + identifier;
+        }
         this.inLink = false;
         continue;
     }
