@@ -1,80 +1,85 @@
 <script src="osf-marked.js"></script>
-<script src="node_modules/markdown/lib/markdown.js"></script>
-<script src="node_modules/showdown/src/showdown.js"></script>
-<script src="node_modules/highlight/lib/vendor/highlight.js/highlight.pack.js"></script>
-<script>hljs.initHighlightingOnLoad();</script>
+<script src="node_modules/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
+<!--Uncomment below for highlighting-->
+<!--<script src="node_modules/highlight/lib/vendor/highlight.js/highlight.pack.js"></script>-->
+<!--<script>hljs.initHighlightingOnLoad();</script>-->
+
+<style type="text/css" media="screen">
+    #editor {
+        position: relative;
+        height: 300px;
+        width: 800px;
+    }
+</style>
+
+
+<div id="editor">
+Markdown Test
+============
+> There is a trailing space in the line above. This affects Markdown only.
+> Blockquotes require two newlines in Marked.
+
+## First Section ##
+Lorem ipsum blah blah I **don't** remember the text, and I *don't* know latin.
+
+[[user:nf3cv]]
+
+[[youtube:lq4LBjhbB4U]]
+
+## Second Section ##
+
+There is a trailing space ~~in the line~~ above. This affects showdown only.
+### Ordered List ###
+
+1. Foo
+1. Foo
+1. Foo
+
+### Unordered List ###
+
+* Foo
+- Foo
++ Foo
+
+### My Little Table ###
+
+Foo                 | Bar           | State
+:------------------ | :-----------: | -----:
+`Code aligned left` | Broken        | Really, really happy
+Code                | In the center | Happy
+Code                | Broken        | Happy
+
+### Image Below ###
+![puddle](https://raw.githubusercontent.com/rliebz/Puddle/master/Content/PC/stand.png "Mouseover Text")
+And a corresponding link: https://github.com/rliebz/puddle
+### Python Code Block ###
+```python
+s = "Python string"
+if indent_exists_below:
+    print s
+```
+</div>
+
+<!--<button onclick="renderCode()">Render</button>-->
+
+<div id="rendered"></div>
+
 
 <script>
-    var toRender = 'Markdown Test\n' +
-            '============ \n' +
-            '> There is a trailing space in the line above. This affects Markdown only.\n' +
-            '> Blockquotes require two newlines in Marked.\n\n' +
-            '## First Section ##\n' +
-            'Lorem ipsum blah blah I **don\'t** remember the text, and I *don\'t* know latin.\n\n' +
-            '[[user:nf3cv]]\n\n' +
-            '[[youtube:lq4LBjhbB4U]]\n\n' +
-            '## Second Section ## \n\n' +
-            'There is a trailing space ~~in the line~~ above. This affects showdown only.\n' +
-            '### Ordered List ###\n\n' +
-            '1. Foo\n' +
-            '1. Foo\n' +
-            '1. Foo\n\n' +
-            '### Unordered List ###\n\n' +
-            '* Foo\n' +
-            '- Foo\n' +
-            '+ Foo\n\n' +
-            '### My Little Table ###\n\n' +
-            'Foo                 | Bar           | State\n' +
-            ':------------------ | :-----------: | -----:\n' +
-            '`Code aligned left` | Broken        | Really, really happy\n' +
-            'Code                | In the center | Happy\n' +
-            'Code                | Broken        | Happy\n\n' +
-            '### Image Below ###\n' +
-            '![puddle](https://raw.githubusercontent.com/rliebz/Puddle/master/Content/PC/stand.png "Mouseover Text")\n' +
-            'And a corresponding link: https://github.com/rliebz/puddle\n' +
-            '### Python Code Block ###\n' +
-            '```python\n' +
-            's = "Python string"\n' +
-            'if indent_exists_below:\n' +
-            '    print s\n' +
-            '```\n';
-    var sdconv = new Showdown.converter();
 
-    // Custom renderer for marked
-    var renderer = new marked.Renderer();
-    renderer.heading = function (text, level) {
-        return '<h' + level + ' style="color: #FF0000">'+
-              text + '</h' + level + '>';
-    };
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/kuroir");
+    editor.getSession().setMode("ace/mode/markdown");
 
-    var benchmarking = false;
-    if (benchmarking) {
-        console.time("showdown");
-        for (var i = 0; i < 50; i++) {
-            sdconv.makeHtml(toRender);
-        }
-        console.timeEnd("showdown");
-
-        console.time("marked");
-        for (var i = 0; i < 50; i++) {
-            marked(toRender);
-        }
-        console.timeEnd("marked");
-
-        console.time("markdown");
-        for (var i = 0; i < 50; i++) {
-            markdown.toHTML(toRender);
-        }
-        console.timeEnd("markdown");
+    function renderCode() {
+        document.getElementById("rendered").innerHTML = marked(editor.getSession().doc.getValue());
     }
 
-//    document.write('<br><br>Showdown: ');
-//    document.write(sdconv.makeHtml(toRender));
+    // Settings
+    editor.getSession().setUseSoftTabs(true);       // Replace tabs with spaces
+    editor.renderer.setShowGutter(false);           // Hides line numbers
+    editor.getSession().on('change', renderCode);   // Render code on change
 
-    document.write('<br><br>Marked: ');
-    document.write(marked(toRender, {renderer: renderer}));
-
-//    document.write('<br><br>Markdown: ');
-//    document.write(markdown.toHTML(toRender));
+    renderCode();
 
 </script>
