@@ -1,4 +1,4 @@
-<script src="node_modules/marked/lib/marked.js"></script>
+<script src="osf-marked.js"></script>
 <script src="node_modules/markdown/lib/markdown.js"></script>
 <script src="node_modules/showdown/src/showdown.js"></script>
 <script src="node_modules/highlight/lib/vendor/highlight.js/highlight.pack.js"></script>
@@ -10,7 +10,8 @@
             '> There is a trailing space in the line above. This affects Markdown only.\n' +
             '> Blockquotes require two newlines in Marked.\n\n' +
             '## First Section ##\n' +
-            'Lorem ipsum blah blah I **don\'t** remember the text, and I *don\'t* know latin.\n' +
+            'Lorem ipsum blah blah I **don\'t** remember the text, and I *don\'t* know latin.\n\n' +
+            '[[foo:bar]]\n\n' +
             '## Second Section ## \n\n' +
             'There is a trailing space ~~in the line~~ above. This affects showdown only.\n' +
             '### Ordered List ###\n\n' +
