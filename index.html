@@ -134,12 +134,9 @@ if indent_exists_below:
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
-                if (prefix.length === 0) { callback(null, []); return }
-
-                if (prefix in resolvedQueries){
-                    console.log('retrieved', prefix);
+                if (prefix.length === 0 || prefix in resolvedQueries) {
                     editor.loadingCompleters = false;
-                    callback(null, totalCompletions)
+                    callback(null, totalCompletions);
                     return;
                 }
 

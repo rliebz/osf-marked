@@ -1224,13 +1224,17 @@ exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
-        if (regex.test(text[i]))
+        // String is a match
+        if (regex.test(text[i])) {
             buf.push(text[i]);
-        else
-            break;
+            if (text[i]==='@') // Prefix starting character
+                return buf.reverse().join("");
+        }
+        // invalid character. No prefix at all
+        else {
+            return "";
+        }
     }
-    var prefix = buf.reverse().join("");
-    return (prefix && prefix[0]==='@') ? prefix : "";
 };
 
 exports.retrieveFollowingIdentifier = function(text, pos, regex) {
