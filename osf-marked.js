@@ -447,7 +447,7 @@ Lexer.prototype.token = function(src, top, bq) {
 
 var inline = {
   // Custom line below
-  osf: /^\[\[alphanum1:alphanum2\]\]/,
+  osf: /^\[\[alphanum1:alphanum2:?humanname?\]\]/,
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   autolink: /^<([^ >]+(@|:\/)[^ >]+)>/,
   url: noop,
@@ -466,6 +466,7 @@ var inline = {
 inline._inside = /(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*/;
 inline._href = /\s*<?([\s\S]*?)>?(?:\s+['"]([\s\S]*?)['"])?\s*/;
 inline._param = /[a-zA-Z0-9_]*/;
+inline._humanname = /[a-zA-Z0-9_ ,'.]*/
 
 inline.link = replace(inline.link)
   ('inside', inline._inside)
@@ -479,6 +480,7 @@ inline.reflink = replace(inline.reflink)
 inline.osf = replace(inline.osf)
   ('alphanum1', inline._param)
   ('alphanum2', inline._param)
+  ('humanname', inline._humanname)
   ();
 
 /**
@@ -588,7 +590,8 @@ InlineLexer.prototype.output = function(src) {
         var type = inside[0];
         var identifier = inside[1];
         if (type === 'user') {
-            out += '<a href="https://osf.io/' + identifier + '"> OSF User </a>';
+            var username = inside[2] || 'OSF User';
+            out += '<a href="https://osf.io/' + identifier + '">' + username + '</a>';
         } else if (type === 'project') {
             out += '<a href="https://osf.io/' + identifier + '"> OSF Project </a>';
         } else if (type === 'youtube') {
