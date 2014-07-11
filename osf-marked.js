@@ -591,9 +591,9 @@ InlineLexer.prototype.output = function(src) {
         var identifier = inside[1];
         if (type === 'user') {
             var username = inside[2] || 'OSF User';
-            out += '<a href="https://osf.io/' + identifier + '">' + username + '</a>';
+            out += '<a href="http://localhost:5000/' + identifier + '">' + username + '</a>';
         } else if (type === 'project') {
-            out += '<a href="https://osf.io/' + identifier + '"> OSF Project </a>';
+            out += '<a href="http://localhost:5000/' + identifier + '"> OSF Project </a>';
         } else if (type === 'youtube') {
             out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + identifier + '" frameborder="0" allowfullscreen></iframe>'
         } else {

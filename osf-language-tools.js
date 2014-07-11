@@ -1770,6 +1770,8 @@ var doLiveAutocomplete = function(e) {
     }
 };
 
+var prefixes = {};
+
 var customLiveAutocomplete = function(e) {
     var editor = e.editor;
     var prefix = getCompletionPrefix(editor);
@@ -1781,13 +1783,11 @@ var customLiveAutocomplete = function(e) {
         hasCompleter = false;
     }
 
-    // Use existing autocompleter if 1 second hasn't passed.
-    // This prevents an extra queries to the server and
-    // bugs with asynchronous requests resolving concurrently.
-    if ( Math.floor((new Date() - editor.lastTime)) < 1000 ) {
+    // Return if no new information or we're loading a completer
+    if (hasCompleter && prefix in prefixes || editor.loadingCompleters)
         return;
-    }
-    editor.lastTime =  new Date();
+
+    prefixes[prefix] = true;
 
 
     if (hasCompleter) {
@@ -1797,6 +1797,7 @@ var customLiveAutocomplete = function(e) {
         editor.completer = new Autocomplete();
         editor.completer.autoSelect = false;
         editor.completer.autoInsert = false;
+        editor.loadingCompleters = true;
         editor.completer.showPopup(editor);
     }
 };

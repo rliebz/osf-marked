@@ -73,7 +73,6 @@ if indent_exists_below:
 
     var langTools = ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
-    editor.lastTime = 0; // Set timer for later use
 //    editor.setTheme("ace/theme/kuroir");
     editor.getSession().setMode("ace/mode/markdown");
 
@@ -117,33 +116,51 @@ if indent_exists_below:
         meta: 'jmcar'
     }];
 
-    resolvedQueries = {};
+    var resolvedQueries = {};
+    var totalCompletions = [];
+
+    function uniquify(array) {
+        var output = array.concat();
+        for(var i = 0; i < output.length; i++) {
+            for(var j = i+1; j < output.length; j++) {
+                if(output[i].uid === output[j].uid)
+                    output.splice(j--, 1);
+            }
+        }
+
+        return output;
+    };
 
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
+                if (prefix.length === 0) { callback(null, []); return }
 
-                if (resolvedQueries.hasOwnProperty(prefix)){
+                if (prefix in resolvedQueries){
                     console.log('retrieved', prefix);
-                    callback(null, resolvedQueries[prefix]);
+                    editor.loadingCompleters = false;
+                    callback(null, totalCompletions)
                     return;
                 }
 
                 var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
+
+                console.time('Ajax');
                 var completions = $.getJSON(url).then(parseUsers).then(function(completions) {
+                    editor.loadingCompleters = false;
                     resolvedQueries[prefix] = completions;
-                    callback(null, completions);
+                    totalCompletions = uniquify(totalCompletions.concat(completions));
+                    console.log('--JSON RETRIEVED--\n', completions);
+                    callback(null, totalCompletions);
                 });
             }
         };
 
         editor.setOptions({enableCustomAutocompletion: [queryCompleter]});
-        console.log('completers', editor.completers);
     }
 
     function onChange(e) {
         renderCode();
-        console.time('Ajax');
     }
 
     // Initialize list
