@@ -1750,7 +1750,6 @@ function getCompletionPrefix(editor) {
 }
 
 var doLiveAutocomplete = function(e) {
-    console.log('doing it live');
     var editor = e.editor;
     var text = e.args || "";
     var hasCompleter = editor.completer && editor.completer.activated;
@@ -1771,24 +1770,35 @@ var doLiveAutocomplete = function(e) {
     }
 };
 
-var forceLiveAutocomplete = function(editor) {
+var customLiveAutocomplete = function(e) {
+    var editor = e.editor;
     var prefix = getCompletionPrefix(editor);
-    if (editor.completer && editor.completer.activated) {
-        editor.old_prefix = prefix;
-        console.log('detaching');
+    var hasCompleter = editor.completer && editor.completer.activated;
+
+    // Detach if prefix is none
+    if (hasCompleter && !getCompletionPrefix(editor)) {
+        editor.completer.detach();
+        hasCompleter = false;
+    }
+
+    // Use existing autocompleter if 1 second hasn't passed.
+    // This prevents an extra queries to the server and
+    // bugs with asynchronous requests resolving concurrently.
+    if ( Math.floor((new Date() - editor.lastTime)) < 1000 ) {
+        return;
+    }
+    editor.lastTime =  new Date();
+
+
+    if (hasCompleter) {
         editor.completer.detach();
     }
     if (prefix) {
-        console.log('adding completer for prefix:', prefix);
         editor.completer = new Autocomplete();
         editor.completer.autoSelect = false;
         editor.completer.autoInsert = false;
         editor.completer.showPopup(editor);
     }
-};
-
-var customLiveAutocomplete = function(e) {
-    forceLiveAutocomplete(e.editor);
 };
 
 var Editor = require("../editor").Editor;

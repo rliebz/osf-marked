@@ -1,7 +1,7 @@
 <script src="osf-marked.js"></script>
 <script src="node_modules/ace-builds/src/ace.js"></script>
 <script src="osf-language-tools.js"></script>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="node_modules/jquery/dist/jquery.min.js"></script>
 <!--Uncomment below for highlighting-->
 <!--<script src="node_modules/highlight/lib/vendor/highlight.js/highlight.pack.js"></script>-->
 <!--<script>hljs.initHighlightingOnLoad();</script>-->
@@ -73,6 +73,7 @@ if indent_exists_below:
 
     var langTools = ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
+    editor.lastTime = 0; // Set timer for later use
 //    editor.setTheme("ace/theme/kuroir");
     editor.getSession().setMode("ace/mode/markdown");
 
@@ -114,22 +115,28 @@ if indent_exists_below:
         value: '@Josh Carp jmcar',
         uid: 'jmcar',
         meta: 'jmcar'
-    }]
+    }];
+
+    resolvedQueries = {};
 
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
-//                if (prefix.length === 0) { callback(null, []); return }
+
+                if (resolvedQueries.hasOwnProperty(prefix)){
+                    console.log('retrieved', prefix);
+                    callback(null, resolvedQueries[prefix]);
+                    return;
+                }
+
                 var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
-                var completions = //example_users ||
-                        $.ajax({url: url, dataType: 'json', async: true}).then(parseUsers).then(function(completions) {
-//                    console.log('-- JSON RETRIEVED --\n', completions);
+                var completions = $.getJSON(url).then(parseUsers).then(function(completions) {
+                    resolvedQueries[prefix] = completions;
                     callback(null, completions);
                 });
             }
         };
 
-//        editor.completers = [queryCompleter];
         editor.setOptions({enableCustomAutocompletion: [queryCompleter]});
         console.log('completers', editor.completers);
     }
