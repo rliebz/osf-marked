@@ -102,20 +102,28 @@ if indent_exists_below:
         return completions
     }
 
-    var example_users = [{
-        caption: ' Aobert Aiebowitz',
-        value: '@Aobert Aiebowitz rel5pd',
-        uid: 'rel5pd',
-        meta: 'rel5pd'
+    // TODO: Get contributor list with AJAX using project ID
+    var contributorList = [{
+        caption: ' Brian Nosek',
+        value: '@Brian Nosek brian',
+        uid: 'brian',
+        meta: 'brian'
     },{
         caption: ' Josh Carp',
         value: '@Josh Carp jmcar',
         uid: 'jmcar',
         meta: 'jmcar'
+    },{
+        caption: ' Chris Seto',
+        value: '@Chris Seto chris',
+        uid: 'chris',
+        meta: 'chris'
     }];
 
-    var resolvedQueries = {};
-    var totalCompletions = [];
+    var resolvedQueries = {"@": contributorList};
+    var totalCompletions = contributorList;
+    var trie = {};
+    trie['@'] = {};
 
     function uniquify(array) {
         var output = array.concat();
@@ -127,14 +135,51 @@ if indent_exists_below:
         }
 
         return output;
-    };
+    }
+
+    function prefixFailed(rootObj, str) {
+        // Base case: Prefix may yield results
+        if (str.length < 1)
+            return false;
+
+        var index = str[0];
+
+        if (rootObj[index] === false)
+            return true;
+
+        // Recurse down trie
+        if (!(index in rootObj))
+            rootObj[index] = {};
+        return prefixFailed(rootObj[index], str.substring(1));
+    }
+
+    function setTrieFalse(rootObj, str) {
+        // Base case: Set prefix value to false
+        if (str.length < 2) {
+            rootObj[str] = false;
+            return true;
+        }
+
+        var index = str[0];
+
+        // Prefix returned no results
+        if (rootObj[index] === false){
+            console.log("THIS SHOULDN'T HAPPEN!!!");
+            return false;
+        }
+
+        // Recurse down trie
+        if (!(index in rootObj))
+            rootObj[index] = {};
+        return setTrieFalse(rootObj[index], str.substring(1));
+    }
 
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
-                
-                // TODO: Build tree and don't search a suffix of a failed prefix
-                if (!prefix || prefix in resolvedQueries) {
+
+                // TODO: Build trie and don't search a suffix of a failed prefix
+                if (prefix in resolvedQueries || prefixFailed(trie, prefix)) {
                     editor.loadingCompleters = false;
                     callback(null, totalCompletions);
                     return;
@@ -144,6 +189,8 @@ if indent_exists_below:
 
                 console.time('Ajax');
                 var completions = $.getJSON(url).then(parseUsers).then(function(completions) {
+                    if (completions.length < 10) // We won't get more results
+                        setTrieFalse(trie, prefix);
                     editor.loadingCompleters = false;
                     resolvedQueries[prefix] = completions;
                     totalCompletions = uniquify(totalCompletions.concat(completions));

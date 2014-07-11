@@ -1791,7 +1791,7 @@ var customLiveAutocomplete = function(e) {
     }
 
     // Return if no new information or we're loading a completer
-    if (hasCompleter && prefix in prefixes || editor.loadingCompleters)
+    if ((hasCompleter && prefix in prefixes) || editor.loadingCompleters)
         return;
 
     prefixes[prefix] = true;
