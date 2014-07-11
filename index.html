@@ -64,7 +64,7 @@ if indent_exists_below:
 ```
 </div>
 
-<!--<button onclick="renderCode()">Render</button>-->
+<button onclick="renderCode()">Render</button>
 
 <div id="rendered"></div>
 
@@ -92,12 +92,10 @@ if indent_exists_below:
         // Make user objects
         for (var i in users) {
             var user = users[i];
-//            console.log('user', user.fullname);
             completions.push({
                 caption: ' ' + user.fullname,
                 value: '@' + user.fullname + ' ' + user.id,
                 uid: user.id,
-                score: 300,
                 meta: user.id
             })
         }
@@ -134,7 +132,9 @@ if indent_exists_below:
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
-                if (prefix.length === 0 || prefix in resolvedQueries) {
+                
+                // TODO: Build tree and don't search a suffix of a failed prefix
+                if (!prefix || prefix in resolvedQueries) {
                     editor.loadingCompleters = false;
                     callback(null, totalCompletions);
                     return;
@@ -157,7 +157,7 @@ if indent_exists_below:
     }
 
     function onChange(e) {
-        renderCode();
+//        renderCode();
     }
 
     // Initialize list

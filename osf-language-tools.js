@@ -1218,17 +1218,20 @@ exports.parForEach = function(array, fn, callback) {
     }
 };
 
-var ID_REGEX = /[a-zA-Z_0-9\$\-\u00A2-\uFFFF@\s.]/;
+var ID_REGEX = /[a-zA-Z_0-9\$\-\u00A2-\uFFFF\s.]/;
 
 exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
-        // String is a match
-        if (regex.test(text[i])) {
+        // End of string
+        if (text[i]==='@') {
             buf.push(text[i]);
-            if (text[i]==='@') // Prefix starting character
-                return buf.reverse().join("");
+            return buf.reverse().join("");
+        }
+        // String is a match
+        else if (regex.test(text[i])) {
+            buf.push(text[i]);
         }
         // invalid character. No prefix at all
         else {
