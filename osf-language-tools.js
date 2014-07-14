@@ -1398,7 +1398,7 @@ var Autocomplete = function() {
             else
             {
                 var formattedString = (data.uid) ?
-                    '[[user:' + data.uid + ':' + data.caption.trim() + ']]'
+                    '[[user:' + data.uid + ':' + data.caption.trim() + ']] '
                     :
                     data.value || data;
                 this.editor.execCommand("insertstring", formattedString);
