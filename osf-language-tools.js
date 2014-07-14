@@ -1219,13 +1219,14 @@ exports.parForEach = function(array, fn, callback) {
 };
 
 var ID_REGEX = /[a-zA-Z_0-9\$\-\u00A2-\uFFFF\s.]/;
+var EMAIL_REGEX = /[a-z0-9!#$%&'*+/=?^_`{|}~-]/;
 
 exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
         // End of string
-        if (text[i]==='@') {
+        if (text[i]==='@' && (text[i-1] === undefined || !EMAIL_REGEX.test(text[i-1]))) {
             buf.push(text[i]);
             return buf.reverse().join("");
         }
