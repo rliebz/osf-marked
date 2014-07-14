@@ -73,7 +73,6 @@ if indent_exists_below:
 
     var langTools = ace.require("ace/ext/language_tools");
     var editor = ace.edit("editor");
-//    editor.setTheme("ace/theme/kuroir");
     editor.getSession().setMode("ace/mode/markdown");
 
     function renderCode() {
@@ -81,8 +80,8 @@ if indent_exists_below:
     }
 
     // Settings
-    editor.getSession().setUseSoftTabs(true);       // Replace tabs with spaces
-    editor.renderer.setShowGutter(false);           // Hides line numbers
+    editor.getSession().setUseSoftTabs(true);   // Replace tabs with spaces
+    editor.renderer.setShowGutter(false);       // Hides line numbers
 
     function parseUsers(data) {
         console.timeEnd('Ajax');
@@ -120,7 +119,7 @@ if indent_exists_below:
         meta: 'chris'
     }];
 
-    var resolvedQueries = {"@": contributorList};
+    editor.resolvedQueries = {"@": contributorList};
     var totalCompletions = contributorList;
     var trie = {};
     trie['@'] = {};
@@ -174,37 +173,47 @@ if indent_exists_below:
         return setTrieFalse(rootObj[index], str.substring(1));
     }
 
+    var queryTimeout;
+    var numRequests = 0;
     function setCompleter() {
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
 
-                // TODO: Build trie and don't search a suffix of a failed prefix
-                if (prefix in resolvedQueries || prefixFailed(trie, prefix)) {
-                    editor.loadingCompleters = false;
+                if (prefix in editor.resolvedQueries || prefixFailed(trie, prefix)) {
                     callback(null, totalCompletions);
                     return;
                 }
 
                 var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
 
-                console.time('Ajax');
-                var completions = $.getJSON(url).then(parseUsers).then(function(completions) {
-                    if (completions.length < 10) // We won't get more results
-                        setTrieFalse(trie, prefix);
-                    editor.loadingCompleters = false;
-                    resolvedQueries[prefix] = completions;
-                    totalCompletions = uniquify(totalCompletions.concat(completions));
-                    console.log('--JSON RETRIEVED--\n', completions);
-                    callback(null, totalCompletions);
-                });
+                clearTimeout(queryTimeout);
+                queryTimeout = setTimeout(function() {
+                    numRequests++;
+                    console.time('Ajax');
+                    $.getJSON(url).then(parseUsers).then(function(completions) {
+
+                        // Only act on the most recent request
+                        if (--numRequests > 0)
+                            return;
+
+                        if (completions.length < 10) // We won't get more results
+                            setTrieFalse(trie, prefix);
+                        editor.resolvedQueries[prefix] = completions;
+                        totalCompletions = uniquify(totalCompletions.concat(completions));
+                        console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
+                        callback(null, totalCompletions);
+                    });
+                }, 400);
             }
         };
 
         editor.setOptions({enableCustomAutocompletion: [queryCompleter]});
     }
 
-    function onChange(e) {
-//        renderCode();
+    var renderTimeout;
+    function onChange() {
+        clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(renderCode, 3000);
     }
 
     // Initialize list

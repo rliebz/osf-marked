@@ -1396,9 +1396,11 @@ var Autocomplete = function() {
                 snippetManager.insertSnippet(this.editor, data.snippet);
             else
             {
-                if (data.uid)
-                    data.uid = '[[user:' + data.uid + ':' + data.caption.trim() + ']]';
-                this.editor.execCommand("insertstring", data.uid || data.value || data);
+                var formattedString = (data.uid) ?
+                    '[[user:' + data.uid + ':' + data.caption.trim() + ']]'
+                    :
+                    data.value || data;
+                this.editor.execCommand("insertstring", formattedString);
             }
         }
         this.detach();
@@ -1777,8 +1779,6 @@ var doLiveAutocomplete = function(e) {
     }
 };
 
-var prefixes = {};
-
 var customLiveAutocomplete = function(e) {
     var editor = e.editor;
     var prefix = getCompletionPrefix(editor);
@@ -1790,21 +1790,19 @@ var customLiveAutocomplete = function(e) {
         hasCompleter = false;
     }
 
-    // Return if no new information or we're loading a completer
-    if ((hasCompleter && prefix in prefixes) || editor.loadingCompleters)
+    // Return if no new information and a completer exists
+    if (hasCompleter && prefix in editor.resolvedQueries) {
         return;
-
-    prefixes[prefix] = true;
-
+    }
 
     if (hasCompleter) {
         editor.completer.detach();
     }
+
     if (prefix) {
         editor.completer = new Autocomplete();
         editor.completer.autoSelect = false;
         editor.completer.autoInsert = false;
-        editor.loadingCompleters = true;
         editor.completer.showPopup(editor);
     }
 };
