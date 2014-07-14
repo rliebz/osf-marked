@@ -10,7 +10,7 @@
     #editor {
         position: relative;
         height: 300px;
-        width: 800px;
+        width: 600px;
     }
 </style>
 
@@ -18,8 +18,8 @@
 <div id="editor">
 Markdown Test
 ============
-> There is a trailing space in the line above. This affects Markdown only.
-> Blockquotes require two newlines in Marked.
+ > There is a trailing space in the line above. This affects Markdown only.
+ > Blockquotes require two newlines in Marked.
 
 ## First Section ##
 Lorem ipsum blah blah I **don't** remember the text, and I *don't* know latin.
@@ -28,7 +28,8 @@ Lorem ipsum blah blah I **don't** remember the text, and I *don't* know latin.
 
 ### Youtube Subsection ###
 
-[[youtube:lq4LBjhbB4U]]
+It's commented out for speed, but I swear it works!
+<!--[[youtube:lq4LBjhbB4U]]-->
 
 ## Second Section ##
 
@@ -54,7 +55,8 @@ Code                | In the center | Happy
 Code                | Broken        | Happy
 
 ### Image Below ###
-![puddle](https://raw.githubusercontent.com/rliebz/Puddle/master/Content/PC/stand.png "Mouseover Text")
+Commented out for speed.
+<!--![puddle](https://raw.githubusercontent.com/rliebz/Puddle/master/Content/PC/stand.png "Mouseover Text")-->
 And a corresponding link: https://github.com/rliebz/puddle
 ### Python Code Block ###
 ```python
@@ -119,7 +121,7 @@ if indent_exists_below:
         meta: 'chris'
     }];
 
-    editor.resolvedQueries = {"@": contributorList};
+    editor.resolvedQueries = {"@": true};
     var totalCompletions = contributorList;
     var trie = {};
     trie['@'] = {};
@@ -161,9 +163,9 @@ if indent_exists_below:
 
         var index = str[0];
 
-        // Prefix returned no results
+        // Prefix returned no results. This case will generally be avoided
+        // but can occur as a result of asynchronous requests
         if (rootObj[index] === false){
-            console.log("THIS SHOULDN'T HAPPEN!!!");
             return false;
         }
 
@@ -180,6 +182,7 @@ if indent_exists_below:
             getCompletions: function(editor, session, pos, prefix, callback) {
 
                 if (prefix in editor.resolvedQueries || prefixFailed(trie, prefix)) {
+                    editor.resolvedQueries[prefix] = true;
                     callback(null, totalCompletions);
                     return;
                 }
@@ -190,7 +193,12 @@ if indent_exists_below:
                 queryTimeout = setTimeout(function() {
                     numRequests++;
                     console.time('Ajax');
-                    $.getJSON(url).then(parseUsers).then(function(completions) {
+                    console.log('getting', prefix);
+                    $.ajax({
+                        url: url,
+                        dataType: 'json',
+                        cache: false
+                    }).then(parseUsers).then(function(completions) {
 
                         // Only act on the most recent request
                         if (--numRequests > 0)
@@ -198,7 +206,7 @@ if indent_exists_below:
 
                         if (completions.length < 10) // We won't get more results
                             setTrieFalse(trie, prefix);
-                        editor.resolvedQueries[prefix] = completions;
+                        editor.resolvedQueries[prefix] = true;
                         totalCompletions = uniquify(totalCompletions.concat(completions));
                         console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
                         callback(null, totalCompletions);
