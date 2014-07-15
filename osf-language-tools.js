@@ -1225,8 +1225,14 @@ exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     regex = regex || ID_REGEX;
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
-        // End of string
-        if (text[i]==='@' && (text[i-1] === undefined || !EMAIL_REGEX.test(text[i-1]))) {
+        // End of prefix: project
+        if (text[i] === '@' && text[i-1] === '@') {
+            buf.push(text[i]);
+            buf.push(text[i-1]);
+            return buf.reverse().join("");
+        }
+        // End of prefix: user
+        else if (text[i] === '@' && (text[i-1] === undefined || !EMAIL_REGEX.test(text[i-1]))) {
             buf.push(text[i]);
             return buf.reverse().join("");
         }
@@ -1397,10 +1403,7 @@ var Autocomplete = function() {
                 snippetManager.insertSnippet(this.editor, data.snippet);
             else
             {
-                var formattedString = (data.uid) ?
-                    '[[user:' + data.uid + ':' + data.caption.trim() + ']] '
-                    :
-                    data.value || data;
+                var formattedString = data.markdown || data.value || data;
                 this.editor.execCommand("insertstring", formattedString);
             }
         }
@@ -1792,7 +1795,9 @@ var customLiveAutocomplete = function(e) {
     }
 
     // Return if no new information and a completer exists
-    if (hasCompleter && prefix in editor.resolvedQueries) {
+    if (hasCompleter &&
+        ((editor.searchMode === 'name' && prefix in editor.resolvedNames) ||
+            (editor.searchMode === 'node' && prefix in editor.resolvedNodes))) {
         return;
     }
 

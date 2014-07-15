@@ -85,6 +85,9 @@ if indent_exists_below:
     editor.getSession().setUseSoftTabs(true);   // Replace tabs with spaces
     editor.renderer.setShowGutter(false);       // Hides line numbers
 
+    // Max caption width for autocomplete
+    var MAX_CAPTION = 28;
+
     function parseUsers(data) {
         console.timeEnd('Ajax');
         var completions = [];
@@ -93,38 +96,86 @@ if indent_exists_below:
         // Make user objects
         for (var i in users) {
             var user = users[i];
+            var shortName = (user.fullname.length > MAX_CAPTION) ?
+                    user.fullname.substring(0, MAX_CAPTION - 3) + '...' : user.fullname;
             completions.push({
-                caption: ' ' + user.fullname,
+                caption: ' ' + shortName,
                 value: '@' + user.fullname + ' ' + user.id,
+                meta: user.id,
                 uid: user.id,
-                meta: user.id
+                markdown: '@[' + user.fullname + '](' + user.id + ') '
             })
         }
-        return completions
+        return completions;
+    }
+
+    function parseNodes(data) {
+        console.timeEnd('Ajax');
+        var completions = [];
+        for (var i in data.results) {
+            var p = data.results[i];
+            if (p.hasOwnProperty('contributors')) {
+                var uid = p.url.slice(1, -1);
+                var shortTitle = (p.title.length > MAX_CAPTION) ?
+                        p.title.substring(0, MAX_CAPTION - 3) + '...' :  p.title;
+                console.log('uid', uid);
+                completions.push({
+                    caption: '  ' + shortTitle,
+                    value: '@@' + p.title + ' ' + uid,
+                    meta: uid,
+                    uid: uid,
+                    markdown: '@[' + p.title + '](' + uid + ') '
+                })
+            }
+        }
+        return completions;
     }
 
     // TODO: Get contributor list with AJAX using project ID
     var contributorList = [{
         caption: ' Brian Nosek',
         value: '@Brian Nosek brian',
+        meta: 'brian',
         uid: 'brian',
-        meta: 'brian'
+        markdown: '@[Brian Nosek](brian)'
     },{
         caption: ' Josh Carp',
         value: '@Josh Carp jmcar',
+        meta: 'jmcar',
         uid: 'jmcar',
-        meta: 'jmcar'
+        markdown: '@[Josh Carp](jmcar)'
     },{
         caption: ' Chris Seto',
         value: '@Chris Seto chris',
+        meta: 'chris',
         uid: 'chris',
-        meta: 'chris'
+        markdown: '@[Chris Seto](chris)'
     }];
 
-    editor.resolvedQueries = {"@": true};
-    var totalCompletions = contributorList;
-    var trie = {};
-    trie['@'] = {};
+    var nodeList = [{
+        caption: '  Analysis of different mar...',
+        value: '@@Analysis of different markdown parsers and textual autocompletion in javascript uid12',
+        meta: 'uid12',
+        uid: 'uid12',
+        markdown: '@[Analysis of different markdown parsers and textual autocompletion in javascript](uid12)'
+    },{
+        caption: '  Markdown analysis data',
+        value: '@@Markdown analysis data uid13',
+        meta: 'uid13',
+        uid: 'uid13',
+        markdown: '@[Markdown analysis data](uid13)'
+    }];
+
+    editor.resolvedNames = {"@": true};
+    var nameCompletions = contributorList;
+    var nameTrie = {};
+    nameTrie['@'] = {};
+
+    editor.resolvedNodes = {"@@": true};
+    var nodeCompletions = nodeList;
+    var nodeTrie = {};
+    nodeTrie['@'] = {'@': {}};
+
 
     function uniquify(array) {
         var output = array.concat();
@@ -181,37 +232,83 @@ if indent_exists_below:
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
 
-                if (prefix in editor.resolvedQueries || prefixFailed(trie, prefix)) {
-                    editor.resolvedQueries[prefix] = true;
-                    callback(null, totalCompletions);
-                    return;
+                if (prefix.substring(0, 2) === '@@') {
+                    editor.searchMode = 'node';
+
+                    console.log('beginning prefix', prefix);
+
+                    if (prefix in editor.resolvedNodes || prefixFailed(nodeTrie, prefix)) {
+                        console.log('prefix already resolved', prefix);
+                        editor.resolvedNodes[prefix] = true;
+                        callback(null, nodeCompletions);
+                        return;
+                    }
+
+                    // TODO: Fix endpoint
+                    var url = 'http://localhost:5000/api/v1/search/?q=' + prefix.substring(2);
+
+                    clearTimeout(queryTimeout);
+                    queryTimeout = setTimeout(function () {
+                        numRequests++;
+                        console.time('Ajax');
+                        console.log('getting node', prefix);
+                        $.ajax({
+                            url: url,
+                            dataType: 'json',
+                            cache: false
+                        }).then(parseNodes).then(function (completions) {
+                            // TODO: Don't parse users, parse nodes
+
+                            // Only act on the most recent request
+                            if (--numRequests > 0)
+                                return;
+
+                            if (completions.length < 10) // We won't get more results
+                                setTrieFalse(nodeTrie, prefix);
+                            editor.resolvedNodes[prefix] = true;
+                            nodeCompletions = uniquify(nodeCompletions.concat(completions));
+                            console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
+                            callback(null, nodeCompletions);
+                        });
+                    }, 400);
                 }
 
-                var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
+                else {
+                    editor.searchMode = 'name'
 
-                clearTimeout(queryTimeout);
-                queryTimeout = setTimeout(function() {
-                    numRequests++;
-                    console.time('Ajax');
-                    console.log('getting', prefix);
-                    $.ajax({
-                        url: url,
-                        dataType: 'json',
-                        cache: false
-                    }).then(parseUsers).then(function(completions) {
+                    if (prefix in editor.resolvedNames || prefixFailed(nameTrie, prefix)) {
+                        editor.resolvedNames[prefix] = true;
+                        callback(null, nameCompletions);
+                        return;
+                    }
 
-                        // Only act on the most recent request
-                        if (--numRequests > 0)
-                            return;
+                    var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
 
-                        if (completions.length < 10) // We won't get more results
-                            setTrieFalse(trie, prefix);
-                        editor.resolvedQueries[prefix] = true;
-                        totalCompletions = uniquify(totalCompletions.concat(completions));
-                        console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
-                        callback(null, totalCompletions);
-                    });
-                }, 400);
+                    clearTimeout(queryTimeout);
+                    queryTimeout = setTimeout(function () {
+                        numRequests++;
+                        console.time('Ajax');
+                        console.log('getting user', prefix);
+                        $.ajax({
+                            url: url,
+                            dataType: 'json',
+                            cache: false
+                        }).then(parseUsers).then(function (completions) {
+
+                            // Only act on the most recent request
+                            if (--numRequests > 0)
+                                return;
+
+                            if (completions.length < 10) // We won't get more results
+                                setTrieFalse(nameTrie, prefix);
+                            editor.resolvedNames[prefix] = true;
+                            nameCompletions = uniquify(nameCompletions.concat(completions));
+                            console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
+                            console.log('-- Name Completions --\n', nameCompletions);
+                            callback(null, nameCompletions);
+                        });
+                    }, 400);
+                }
             }
         };
 
