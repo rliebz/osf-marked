@@ -447,7 +447,9 @@ Lexer.prototype.token = function(src, top, bq) {
 
 var inline = {
   // Custom line below
-  osf: /^\[\[alphanum1:alphanum2:?humanname?\]\]/,
+//  osf: /^\[\[alphanum1:alphanum2:?humanname?\]\]/,
+  osf: /^@\[(inside)\]\(uid\)/,
+  youtube: /^\[\[youtube:(alphanum)\]\]/,
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   autolink: /^<([^ >]+(@|:\/)[^ >]+)>/,
   url: noop,
@@ -465,8 +467,7 @@ var inline = {
 
 inline._inside = /(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*/;
 inline._href = /\s*<?([\s\S]*?)>?(?:\s+['"]([\s\S]*?)['"])?\s*/;
-inline._param = /[a-zA-Z0-9_]*/;
-inline._humanname = /[a-zA-Z0-9_ ,'.]*/
+inline._uid = /([a-zA-Z0-9]*)/;
 
 inline.link = replace(inline.link)
   ('inside', inline._inside)
@@ -478,11 +479,15 @@ inline.reflink = replace(inline.reflink)
   ();
 
 inline.osf = replace(inline.osf)
-  ('alphanum1', inline._param)
-  ('alphanum2', inline._param)
-  ('humanname', inline._humanname)
+  ('inside', inline._inside)
+  ('uid', inline._uid)
   ();
 
+inline.youtube = replace(inline.youtube)
+  ('alphanum', inline._uid)
+  ();
+
+console.log(inline.youtube);
 /**
  * Normal Inline Grammar
  */
@@ -586,19 +591,16 @@ InlineLexer.prototype.output = function(src) {
     if (cap = this.rules.osf.exec(src)) {
         src = src.substring(cap[0].length);
         this.inLink = true;
-        var inside = cap[0].substring(2, cap[0].length -2).split(':');
-        var type = inside[0];
-        var identifier = inside[1];
-        if (type === 'user') {
-            var username = inside[2] || 'OSF User';
-            out += '<a href="http://localhost:5000/' + identifier + '">' + username + '</a>';
-        } else if (type === 'project') {
-            out += '<a href="http://localhost:5000/' + identifier + '"> OSF Project </a>';
-        } else if (type === 'youtube') {
-            out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + identifier + '" frameborder="0" allowfullscreen></iframe>'
-        } else {
-            out += '<b>Param1: </b>' + type + ' <b>Param2: </b>' + identifier;
-        }
+        out += '<a href="http://localhost:5000/' + cap[2] + '">' + cap[1] + '</a>';
+        this.inLink = false;
+        continue;
+    }
+
+   // youtube
+    if (cap = this.rules.youtube.exec(src)) {
+        src = src.substring(cap[0].length);
+        this.inLink = true;
+        out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + cap[1] + '" frameborder="0" allowfullscreen></iframe>'
         this.inLink = false;
         continue;
     }
