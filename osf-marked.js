@@ -487,7 +487,6 @@ inline.youtube = replace(inline.youtube)
   ('alphanum', inline._uid)
   ();
 
-console.log(inline.youtube);
 /**
  * Normal Inline Grammar
  */

@@ -118,7 +118,6 @@ if indent_exists_below:
                 var uid = p.url.slice(1, -1);
                 var shortTitle = (p.title.length > MAX_CAPTION) ?
                         p.title.substring(0, MAX_CAPTION - 3) + '...' :  p.title;
-                console.log('uid', uid);
                 completions.push({
                     caption: '  ' + shortTitle,
                     value: '@@' + p.title + ' ' + uid,
@@ -235,8 +234,6 @@ if indent_exists_below:
                 if (prefix.substring(0, 2) === '@@') {
                     editor.searchMode = 'node';
 
-                    console.log('beginning prefix', prefix);
-
                     if (prefix in editor.resolvedNodes || prefixFailed(nodeTrie, prefix)) {
                         console.log('prefix already resolved', prefix);
                         editor.resolvedNodes[prefix] = true;
@@ -251,7 +248,6 @@ if indent_exists_below:
                     queryTimeout = setTimeout(function () {
                         numRequests++;
                         console.time('Ajax');
-                        console.log('getting node', prefix);
                         $.ajax({
                             url: url,
                             dataType: 'json',
@@ -288,7 +284,6 @@ if indent_exists_below:
                     queryTimeout = setTimeout(function () {
                         numRequests++;
                         console.time('Ajax');
-                        console.log('getting user', prefix);
                         $.ajax({
                             url: url,
                             dataType: 'json',
@@ -304,7 +299,6 @@ if indent_exists_below:
                             editor.resolvedNames[prefix] = true;
                             nameCompletions = uniquify(nameCompletions.concat(completions));
                             console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
-                            console.log('-- Name Completions --\n', nameCompletions);
                             callback(null, nameCompletions);
                         });
                     }, 400);
