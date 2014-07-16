@@ -1,4 +1,5 @@
 <script src="osf-marked.js"></script>
+<!--<script src="node_modules/marked-unused/lib/marked.js"></script>-->
 <script src="node_modules/ace-builds/src/ace.js"></script>
 <script src="osf-language-tools.js"></script>
 <script src="node_modules/jquery/dist/jquery.min.js"></script>
@@ -18,13 +19,11 @@
 <div id="editor">
 Markdown Test
 ============
- > There is a trailing space in the line above. This affects Markdown only.
- > Blockquotes require two newlines in Marked.
+  > There is a trailing space in the line above. This affects Markdown only.
+  > Blockquotes require two newlines in Marked.
 
 ## First Section ##
 Lorem ipsum blah blah I **don't** remember the text, and I *don't* know latin.
-
-<!--[[user:nf3cv]]-->
 
 ### Youtube Subsection ###
 
@@ -136,19 +135,19 @@ if indent_exists_below:
         value: '@Brian Nosek brian',
         meta: 'brian',
         uid: 'brian',
-        markdown: '@[Brian Nosek](brian)'
+        markdown: '@[Brian Nosek](brian) '
     },{
         caption: ' Josh Carp',
         value: '@Josh Carp jmcar',
         meta: 'jmcar',
         uid: 'jmcar',
-        markdown: '@[Josh Carp](jmcar)'
+        markdown: '@[Josh Carp](jmcar) '
     },{
         caption: ' Chris Seto',
         value: '@Chris Seto chris',
         meta: 'chris',
         uid: 'chris',
-        markdown: '@[Chris Seto](chris)'
+        markdown: '@[Chris Seto](chris) '
     }];
 
     var nodeList = [{
@@ -156,13 +155,13 @@ if indent_exists_below:
         value: '@@Analysis of different markdown parsers and textual autocompletion in javascript uid12',
         meta: 'uid12',
         uid: 'uid12',
-        markdown: '@[Analysis of different markdown parsers and textual autocompletion in javascript](uid12)'
+        markdown: '@[Analysis of different markdown parsers and textual autocompletion in javascript](uid12) '
     },{
         caption: '  Markdown analysis data',
         value: '@@Markdown analysis data uid13',
         meta: 'uid13',
         uid: 'uid13',
-        markdown: '@[Markdown analysis data](uid13)'
+        markdown: '@[Markdown analysis data](uid13) '
     }];
 
     editor.resolvedNames = {"@": true};

@@ -446,15 +446,12 @@ Lexer.prototype.token = function(src, top, bq) {
  */
 
 var inline = {
-  // Custom line below
-//  osf: /^\[\[alphanum1:alphanum2:?humanname?\]\]/,
-  osf: /^@\[(inside)\]\(uid\)/,
-  youtube: /^\[\[youtube:(alphanum)\]\]/,
+  youtube: /^\[\[youtube:(alphanum)\]\]/,   // Basic extension
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   autolink: /^<([^ >]+(@|:\/)[^ >]+)>/,
   url: noop,
   tag: /^<!--[\s\S]*?-->|^<\/?\w+(?:"[^"]*"|'[^']*'|[^'">])*?>/,
-  link: /^!?\[(inside)\]\(href\)/,
+  link: /^[@!]?\[(inside)\]\(href\)/,   // Edited to include '@[text](link)' for osf links
   reflink: /^!?\[(inside)\]\s*\[([^\]]*)\]/,
   nolink: /^!?\[((?:\[[^\]]*\]|[^\[\]])*)\]/,
   strong: /^__([\s\S]+?)__(?!_)|^\*\*([\s\S]+?)\*\*(?!\*)/,
@@ -462,12 +459,12 @@ var inline = {
   code: /^(`+)\s*([\s\S]*?[^`])\s*\1(?!`)/,
   br: /^ {2,}\n(?!\s*$)/,
   del: noop,
-  text: /^[\s\S]+?(?=[\\<!\[_*`]| {2,}\n|$)/
+  text: /^[\s\S]+?(?=[\\<!@\[_*`]| {2,}\n|$)/
 };
 
 inline._inside = /(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*/;
 inline._href = /\s*<?([\s\S]*?)>?(?:\s+['"]([\s\S]*?)['"])?\s*/;
-inline._uid = /([a-zA-Z0-9]*)/;
+inline._uid = /([a-zA-Z0-9_]{5,})/; // Currently for youtube UIDs only
 
 inline.link = replace(inline.link)
   ('inside', inline._inside)
@@ -476,11 +473,6 @@ inline.link = replace(inline.link)
 
 inline.reflink = replace(inline.reflink)
   ('inside', inline._inside)
-  ();
-
-inline.osf = replace(inline.osf)
-  ('inside', inline._inside)
-  ('uid', inline._uid)
   ();
 
 inline.youtube = replace(inline.youtube)
@@ -584,15 +576,6 @@ InlineLexer.prototype.output = function(src) {
       src = src.substring(cap[0].length);
       out += cap[1];
       continue;
-    }
-
-     // osf
-    if (cap = this.rules.osf.exec(src)) {
-        src = src.substring(cap[0].length);
-        this.inLink = true;
-        out += '<a href="http://localhost:5000/' + cap[2] + '">' + cap[1] + '</a>';
-        this.inLink = false;
-        continue;
     }
 
    // youtube
@@ -730,6 +713,10 @@ InlineLexer.prototype.output = function(src) {
 InlineLexer.prototype.outputLink = function(cap, link) {
   var href = escape(link.href)
     , title = link.title ? escape(link.title) : null;
+
+  // Matches OSF flavored markdown
+  if (cap[0].charAt(0) === '@')
+    return '<a href="http://localhost:5000/' + cap[2] + '">' + cap[1] + '</a>';
 
   return cap[0].charAt(0) !== '!'
     ? this.renderer.link(href, title, this.output(cap[1]))
