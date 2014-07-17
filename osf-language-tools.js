@@ -1226,16 +1226,27 @@ exports.retrievePrecedingIdentifier = function(text, pos, regex) {
     var buf = [];
     for (var i = pos-1; i >= 0; i--) {
         // End of prefix: project
-        if (text[i] === '@' && text[i-1] === '@') {
-            buf.push(text[i]);
-            buf.push(text[i-1]);
+        if (text[i] === ':') {
+            buf.push(':');
             return buf.reverse().join("");
         }
+//        else if (text[i] === ':' && text.substring(i-8, i) === ':project') {
+//            buf.push('P');
+//            return buf.reverse().join("");
+//        }
+//        else if (text[i] === ':' && text.substring(i-5, i) === '[[osf') {
+//            buf.push('?');
+//            return buf.reverse().join("");
+//        }
+//        else if (text[i] === '@' && text[i-1] === '@') {
+//            buf.push('P');
+//            return buf.reverse().join("");
+//        }
         // End of prefix: user
-        else if (text[i] === '@' && (text[i-1] === undefined || !EMAIL_REGEX.test(text[i-1]))) {
-            buf.push(text[i]);
-            return buf.reverse().join("");
-        }
+//        else if (text[i] === '@' && (text[i-1] === undefined || !EMAIL_REGEX.test(text[i-1]))) {
+//            buf.push(text[i]);
+//            return buf.reverse().join("");
+//        }
         // String is a match
         else if (regex.test(text[i])) {
             buf.push(text[i]);
@@ -1789,17 +1800,13 @@ var customLiveAutocomplete = function(e) {
     var hasCompleter = editor.completer && editor.completer.activated;
 
     // Detach if prefix is none
-    if (hasCompleter && !getCompletionPrefix(editor)) {
+    if (hasCompleter && prefix[0] !== ':') {
         editor.completer.detach();
         hasCompleter = false;
     }
 
-    // Return if no new information and a completer exists
-    if (hasCompleter &&
-        ((editor.searchMode === 'name' && prefix in editor.resolvedNames) ||
-            (editor.searchMode === 'node' && prefix in editor.resolvedNodes))) {
+    if (editor.lastPrefix === prefix)
         return;
-    }
 
     if (hasCompleter) {
         editor.completer.detach();

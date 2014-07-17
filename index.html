@@ -87,6 +87,10 @@ if indent_exists_below:
     // Max caption width for autocomplete
     var MAX_CAPTION = 28;
 
+    var userPrefix = ':';
+    var nodePrefix = ':';
+    var optionsPrefix = ':';
+
     function parseUsers(data) {
         console.timeEnd('Ajax');
         var completions = [];
@@ -99,10 +103,10 @@ if indent_exists_below:
                     user.fullname.substring(0, MAX_CAPTION - 3) + '...' : user.fullname;
             completions.push({
                 caption: ' ' + shortName,
-                value: '@' + user.fullname + ' ' + user.id,
+                value: userPrefix + user.fullname + user.id,
                 meta: user.id,
                 uid: user.id,
-                markdown: '@[' + user.fullname + '](' + user.id + ') '
+                markdown: ':' + user.id + ']]'
             })
         }
         return completions;
@@ -118,62 +122,67 @@ if indent_exists_below:
                 var shortTitle = (p.title.length > MAX_CAPTION) ?
                         p.title.substring(0, MAX_CAPTION - 3) + '...' :  p.title;
                 completions.push({
-                    caption: '  ' + shortTitle,
-                    value: '@@' + p.title + ' ' + uid,
+                    caption: ' ' + shortTitle,
+                    value: nodePrefix + p.title + uid,
                     meta: uid,
                     uid: uid,
-                    markdown: '@[' + p.title + '](' + uid + ') '
+                    markdown: ':' + uid + ']]'
                 })
             }
         }
         return completions;
     }
 
+    var osfOptions = [{
+        caption: ' Project',
+        value: optionsPrefix + 'Project',
+        markdown: ':project:'
+    },{
+        caption: ' User',
+        value: optionsPrefix + 'User',
+        markdown: ':user:'
+    }];
+
     // TODO: Get contributor list with AJAX using project ID
-    var contributorList = [{
-        caption: ' Brian Nosek',
-        value: '@Brian Nosek brian',
-        meta: 'brian',
-        uid: 'brian',
-        markdown: '@[Brian Nosek](brian) '
+    var contributorData = {users: [{
+        fullname: 'Brian Nosek',
+        id: 'brian'
     },{
-        caption: ' Josh Carp',
-        value: '@Josh Carp jmcar',
-        meta: 'jmcar',
-        uid: 'jmcar',
-        markdown: '@[Josh Carp](jmcar) '
+        fullname: 'Josh Carp',
+        id: 'jmcarp'
     },{
-        caption: ' Chris Seto',
-        value: '@Chris Seto chris',
-        meta: 'chris',
-        uid: 'chris',
-        markdown: '@[Chris Seto](chris) '
-    }];
+        fullname: 'Chris Seto',
+        id: 'chris'
+    }]};
+    var contributorList = parseUsers(contributorData);
 
-    var nodeList = [{
-        caption: '  Analysis of different mar...',
-        value: '@@Analysis of different markdown parsers and textual autocompletion in javascript uid12',
-        meta: 'uid12',
-        uid: 'uid12',
-        markdown: '@[Analysis of different markdown parsers and textual autocompletion in javascript](uid12) '
+    var nodeData = {results: [{
+        contributors: true,
+        title: 'Analysis of different markdown parsers and textual autocompletion in javascript',
+        url: '/uid11/'
     },{
-        caption: '  Markdown analysis data',
-        value: '@@Markdown analysis data uid13',
-        meta: 'uid13',
-        uid: 'uid13',
-        markdown: '@[Markdown analysis data](uid13) '
-    }];
+        contributors: true,
+        title: 'Markdown analysis data',
+        url: '/uid22/'
+    }]};
+    var nodeList = parseNodes(nodeData);
 
-    editor.resolvedNames = {"@": true};
+
+    editor.resolvedOptions = {};
+
+    editor.resolvedNames = {};
+    editor.resolvedNames[userPrefix] = true;    // Exposes default list.
     var nameCompletions = contributorList;
     var nameTrie = {};
-    nameTrie['@'] = {};
 
-    editor.resolvedNodes = {"@@": true};
+    editor.resolvedNodes = {};
+    editor.resolvedNodes[nodePrefix] = true;    // Exposes default list.
     var nodeCompletions = nodeList;
     var nodeTrie = {};
-    nodeTrie['@'] = {'@': {}};
 
+    function endsWith(str, suffix) {
+        return str.indexOf(suffix, str.length - suffix.length) !== -1;
+    }
 
     function uniquify(array) {
         var output = array.concat();
@@ -230,18 +239,28 @@ if indent_exists_below:
         var queryCompleter = {
             getCompletions: function(editor, session, pos, prefix, callback) {
 
-                if (prefix.substring(0, 2) === '@@') {
+                console.log('evaluating completions for', prefix);
+                editor.lastPrefix = prefix;
+
+                var line = session.getLine(pos.row);
+                line = line.substring(0, pos.column - prefix.length);
+
+                if (endsWith(line, 'osf')) {
+                    editor.resolvedOptions[prefix] = true;
+                    editor.searchMode = 'options';
+                    callback(null, osfOptions);
+                }
+
+                else if (endsWith(line, 'project')) {
                     editor.searchMode = 'node';
 
                     if (prefix in editor.resolvedNodes || prefixFailed(nodeTrie, prefix)) {
-                        console.log('prefix already resolved', prefix);
                         editor.resolvedNodes[prefix] = true;
                         callback(null, nodeCompletions);
                         return;
                     }
 
-                    // TODO: Fix endpoint
-                    var url = 'http://localhost:5000/api/v1/search/?q=' + prefix.substring(2);
+                    var url = 'http://localhost:5000/api/v1/search/?q=' + prefix.substring(1);
 
                     clearTimeout(queryTimeout);
                     queryTimeout = setTimeout(function () {
@@ -252,7 +271,6 @@ if indent_exists_below:
                             dataType: 'json',
                             cache: false
                         }).then(parseNodes).then(function (completions) {
-                            // TODO: Don't parse users, parse nodes
 
                             // Only act on the most recent request
                             if (--numRequests > 0)
@@ -268,8 +286,8 @@ if indent_exists_below:
                     }, 400);
                 }
 
-                else {
-                    editor.searchMode = 'name'
+                else if (endsWith(line, name)) {
+                    editor.searchMode = 'name';
 
                     if (prefix in editor.resolvedNames || prefixFailed(nameTrie, prefix)) {
                         editor.resolvedNames[prefix] = true;
@@ -310,8 +328,9 @@ if indent_exists_below:
 
     var renderTimeout;
     function onChange() {
-        clearTimeout(renderTimeout);
-        renderTimeout = setTimeout(renderCode, 3000);
+        // Uncomment to auto-render
+//        clearTimeout(renderTimeout);
+//        renderTimeout = setTimeout(renderCode, 3000);
     }
 
     // Initialize list

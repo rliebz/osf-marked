@@ -446,7 +446,8 @@ Lexer.prototype.token = function(src, top, bq) {
  */
 
 var inline = {
-  youtube: /^\[\[youtube:(alphanum)\]\]/,   // Basic extension
+  osf: /^\[\[osf:(keyword):(uid)\]\]/,
+  youtube: /^\[\[youtube:(uid)\]\]/,   // Basic extension
   escape: /^\\([\\`*{}\[\]()#+\-.!_>])/,
   autolink: /^<([^ >]+(@|:\/)[^ >]+)>/,
   url: noop,
@@ -464,7 +465,8 @@ var inline = {
 
 inline._inside = /(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*/;
 inline._href = /\s*<?([\s\S]*?)>?(?:\s+['"]([\s\S]*?)['"])?\s*/;
-inline._uid = /([a-zA-Z0-9_]{5,})/; // Currently for youtube UIDs only
+inline._keyword = /[a-zA-Z]+/;
+inline._uid = /[a-zA-Z0-9_]{5,}/; // Currently for youtube UIDs only
 
 inline.link = replace(inline.link)
   ('inside', inline._inside)
@@ -475,8 +477,13 @@ inline.reflink = replace(inline.reflink)
   ('inside', inline._inside)
   ();
 
+inline.osf = replace(inline.osf)
+  ('keyword', inline._keyword)
+  ('uid', inline._uid)
+  ();
+
 inline.youtube = replace(inline.youtube)
-  ('alphanum', inline._uid)
+  ('uid', inline._uid)
   ();
 
 /**
@@ -578,7 +585,17 @@ InlineLexer.prototype.output = function(src) {
       continue;
     }
 
-   // youtube
+    // osf
+    if (cap = this.rules.osf.exec(src)) {
+        src = src.substring(cap[0].length);
+        console.log('osf cap', cap);
+        this.inLink = true;
+        out += '<a href="localhost:5000/' + cap[2] + '"> OSF ' + cap[1] + '</a>';
+        this.inLink = false;
+        continue;
+    }
+
+    // youtube
     if (cap = this.rules.youtube.exec(src)) {
         src = src.substring(cap[0].length);
         this.inLink = true;
