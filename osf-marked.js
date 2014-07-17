@@ -11,6 +11,7 @@
  */
 
 var block = {
+  toc: /^\[\[toc\]\]/, // Custom modules!
   newline: /^\n+/,
   code: /^( {4}[^\n]+\n*)+/,
   fences: noop,
@@ -167,6 +168,29 @@ Lexer.prototype.token = function(src, top, bq) {
           type: 'space'
         });
       }
+    }
+
+    // toc
+    if (cap = this.rules.toc.exec(src)) {
+        src = src.substring(cap[0].length);
+        console.log(src);
+        lexed = Lexer.lex(src);
+        console.log('lexed', lexed);
+        var totalOutput = '## Table of Contents\n';
+        for (var i in lexed) {
+            if (lexed[i].type === "heading"){
+                var h = lexed[i];
+                // Indent bullet based on header depth
+                var bullet = new Array((h.depth - 1) * 2 + 1).join(' ') + '* ';
+                // id logic copied from heading section
+                var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
+                var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
+                totalOutput += output;
+                console.log(output);
+            }
+        }
+        src = totalOutput + '\n' + src;
+        continue;
     }
 
     // code
