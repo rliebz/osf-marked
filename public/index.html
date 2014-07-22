@@ -1,0 +1,110 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<link href="style.css" rel="stylesheet" type="text/css">
+	</head>
+
+	<body>
+		<div id="header">
+			<div id="htext">
+				<b>Editing</b> <input type="text" value="ace" id='namefield'></input>
+			</div>
+		</div>
+
+		<div id="editor">Connecting...</div>
+		<script src="http://ajaxorg.github.com/ace/build/src/ace.js" type="text/javascript" charset="utf-8"></script>
+            <script src="/channel/bcsocket.js"></script>
+		<script src="/share/share.uncompressed.js"></script>
+		<script src="/share/ace.js"></script>
+		<script>
+	var doc = null;
+	var editor;
+    var Range = ace.require('ace/range').Range;
+    var lastMarker = null;
+
+    var someObj;
+
+	var setDoc = function(docName) {
+
+		editor.setReadOnly(true);
+		document.title = docName;
+
+		sharejs.open(docName, "text", function(error, newDoc) {
+
+			if (doc != null) {
+				doc.close();
+				doc.detach_ace();
+			}
+
+			doc = newDoc;
+
+			if (error) {
+				console.error(error);
+				return;
+			}
+			doc.attach_ace(editor);
+
+//            doc.on('change', function(op) {
+//                var c = op[0];
+//                console.log(c);
+//                var pos = editor.getCursorPosition();
+//                editor.getSession().removeMarker(lastMarker);
+//                if (c.hasOwnProperty('i')) {
+//                    var col = c.p + c.i.length;
+//                    var row = 0;
+//                    for (var i = 0; i <= c.p; i++) {
+//                        if (doc.snapshot[i] === '\n') {
+//                            row += 1;
+//                            col = c.p + c.i.length - i - 1;
+//                        }
+//                    }
+//                } else if (c.hasOwnProperty('d')) {
+//                    var col = c.p - c.d.length;
+//                    var row = 0;
+//                    for (var i = 0; i < c.p; i++) {
+//                        if (doc.snapshot[i] === '\n') {
+//                            row += 1;
+//                            col = c.p - c.d.length - i;
+//                        }
+//                    }
+//                }
+//                console.log('r', row, '| col', col);
+//                var range = new Range(row, col, row, col+1);
+//                lastMarker = editor.getSession().addMarker(range, "cursor", "text");
+//            });
+
+			editor.setReadOnly(false);
+		});
+	};
+
+
+
+	window.onload = function() {
+		editor = ace.edit("editor");
+		editor.session.setUseWrapMode(true);
+
+		var session = editor.getSession();
+		session.setTabSize(2);
+		session.setUseSoftTabs(true);
+
+
+		setDoc('ace');
+
+		var namefield = document.getElementById('namefield');
+		var fn = function() {
+			var docName = namefield.value;
+
+			if (docName) {
+				setDoc(docName);
+			}
+		};
+
+		if (namefield.addEventListener) {
+			namefield.addEventListener('input', fn, false);
+		} else {
+			namefield.attachEvent('oninput', fn);
+		}
+	};
+		</script>
+	</body>
+</html>	
