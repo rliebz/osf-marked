@@ -1,30 +1,100 @@
-<!DOCTYPE HTML>
-<html>
-	<head>
-		<link href="style.css" rel="stylesheet" type="text/css">
-	</head>
+<script src="../osf-marked.js"></script>
+<script src="http://ajaxorg.github.com/ace/build/src/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="../osf-language-tools.js"></script>
+<!--<script src="../node_modules/jquery/dist/jquery.min.js"></script>-->
 
-	<body>
-		<div id="header">
-			<div id="htext">
-				<b>Editing</b> <input type="text" value="ace" id='namefield'></input>
-			</div>
-		</div>
+<style type="text/css" media="screen">
+    #editor {
+        position: relative;
+        height: 300px;
+        width: 600px;
+    }
+</style>
 
-		<div id="editor">Connecting...</div>
-		<script src="http://ajaxorg.github.com/ace/build/src/ace.js" type="text/javascript" charset="utf-8"></script>
-            <script src="/channel/bcsocket.js"></script>
-		<script src="/share/share.uncompressed.js"></script>
-		<script src="/share/ace.js"></script>
-		<script>
-	var doc = null;
-	var editor;
-    var Range = ace.require('ace/range').Range;
-    var lastMarker = null;
 
-    var someObj;
+<div id="editor">Loading...</div>
 
-	var setDoc = function(docName) {
+<!--Good markdown overview. Currently hidden because I have no idea how-->
+<!--to load this into ace by default.-->
+<div style="display: none;">
+A Test for Markdown Rendering
+=========
+
+[[toc]]
+
+Marked
+---------
+
+  > There is a trailing space in the line above. This affects Markdown only.
+  > Blockquotes require two newlines in Marked.
+
+
+## First Section ##
+
+Lorem ipsum blah blah I **don't** remember the text, and I *don't* know latin.
+
+
+### Youtube Subsection ###
+
+It's commented out for speed, but I swear it works!
+<!--[[youtube:lq4LBjhbB4U]]-->
+
+
+## Second Section ##
+
+There is a trailing space ~~in the line~~ above.
+
+
+### Ordered List ###
+
+1. Foo
+1. Foo
+1. Foo
+
+
+### Unordered List ###
+
+* Foo
+- Foo
++ Foo
+
+
+### My Little Table ###
+
+Foo                 | Bar           | State
+:------------------ | :-----------: | -----:
+`Code aligned left` | Broken        | Really, really happy
+Code                | In the center | Happy
+Code                | Broken        | Happy
+
+### Image Below ###
+Commented out for speed.
+<!--![puddle](https://raw.githubusercontent.com/rliebz/Puddle/master/Content/PC/stand.png "Mouseover Text")-->
+And a corresponding link: https://github.com/rliebz/puddle
+
+### Python Code Block ###
+```python
+s = "Python string"
+if indent_exists_below:
+    print s
+```
+</div>
+
+<button onclick="renderCode()">Render</button>
+
+<div id="rendered"></div>
+
+<script src="/channel/bcsocket.js"></script>
+<script src="/share/share.uncompressed.js"></script>
+<script src="/share/ace.js"></script>
+<script>
+
+    var doc = null;
+    var editor;
+    var langTools = ace.require("ace/ext/language_tools");
+
+    var setDoc = function(docName) {
 
 		editor.setReadOnly(true);
 		document.title = docName;
@@ -44,67 +114,280 @@
 			}
 			doc.attach_ace(editor);
 
-//            doc.on('change', function(op) {
-//                var c = op[0];
-//                console.log(c);
-//                var pos = editor.getCursorPosition();
-//                editor.getSession().removeMarker(lastMarker);
-//                if (c.hasOwnProperty('i')) {
-//                    var col = c.p + c.i.length;
-//                    var row = 0;
-//                    for (var i = 0; i <= c.p; i++) {
-//                        if (doc.snapshot[i] === '\n') {
-//                            row += 1;
-//                            col = c.p + c.i.length - i - 1;
-//                        }
-//                    }
-//                } else if (c.hasOwnProperty('d')) {
-//                    var col = c.p - c.d.length;
-//                    var row = 0;
-//                    for (var i = 0; i < c.p; i++) {
-//                        if (doc.snapshot[i] === '\n') {
-//                            row += 1;
-//                            col = c.p - c.d.length - i;
-//                        }
-//                    }
-//                }
-//                console.log('r', row, '| col', col);
-//                var range = new Range(row, col, row, col+1);
-//                lastMarker = editor.getSession().addMarker(range, "cursor", "text");
-//            });
-
 			editor.setReadOnly(false);
 		});
 	};
 
+    function renderCode() {
+        document.getElementById("rendered").innerHTML = marked(editor.getSession().doc.getValue());
+    }
+
+    window.onload = function() {
+
+        editor = ace.edit("editor");
+        editor.getSession().setMode("ace/mode/markdown");
+
+        setDoc('default');
+
+        // Settings
+        editor.getSession().setUseWrapMode(true);;  // Wrap text
+        editor.getSession().setUseSoftTabs(true);   // Replace tabs with spaces
+        editor.renderer.setShowGutter(false);       // Hides line numbers
+
+        // Max caption width for autocomplete
+        var MAX_CAPTION = 28;
+
+        var userPrefix = ':';
+        var nodePrefix = ':';
+        var optionsPrefix = ':';
+
+        function parseUsers(data) {
+            console.timeEnd('Ajax');
+            var completions = [];
+            var users = data.users;
+
+            // Make user objects
+            for (var i in users) {
+                var user = users[i];
+                var shortName = (user.fullname.length > MAX_CAPTION) ?
+                        user.fullname.substring(0, MAX_CAPTION - 3) + '...' : user.fullname;
+                completions.push({
+                    caption: ' ' + shortName,
+                    value: userPrefix + user.fullname + user.id,
+                    meta: user.id,
+                    uid: user.id,
+                    markdown: ':' + user.id + ']]'
+                })
+            }
+            return completions;
+        }
+
+        function parseNodes(data) {
+            console.timeEnd('Ajax');
+            var completions = [];
+            for (var i in data.results) {
+                var p = data.results[i];
+                if (p.hasOwnProperty('contributors')) {
+                    var uid = p.url.slice(1, -1);
+                    var shortTitle = (p.title.length > MAX_CAPTION) ?
+                            p.title.substring(0, MAX_CAPTION - 3) + '...' :  p.title;
+                    completions.push({
+                        caption: ' ' + shortTitle,
+                        value: nodePrefix + p.title + uid,
+                        meta: uid,
+                        uid: uid,
+                        markdown: ':' + uid + ']]'
+                    })
+                }
+            }
+            return completions;
+        }
+
+        var osfOptions = [{
+            caption: ' Project',
+            value: optionsPrefix + 'Project',
+            markdown: ':project:'
+        },{
+            caption: ' User',
+            value: optionsPrefix + 'User',
+            markdown: ':user:'
+        }];
+
+        // TODO: Get contributor list with AJAX using project ID
+        var contributorData = {users: [{
+            fullname: 'Brian Nosek',
+            id: 'brian'
+        },{
+            fullname: 'Josh Carp',
+            id: 'jmcarp'
+        },{
+            fullname: 'Chris Seto',
+            id: 'chris'
+        }]};
+        var contributorList = parseUsers(contributorData);
+
+        var nodeData = {results: [{
+            contributors: true,
+            title: 'Analysis of different markdown parsers and textual autocompletion in javascript',
+            url: '/uid11/'
+        },{
+            contributors: true,
+            title: 'Markdown analysis data',
+            url: '/uid22/'
+        }]};
+        var nodeList = parseNodes(nodeData);
 
 
-	window.onload = function() {
-		editor = ace.edit("editor");
-		editor.session.setUseWrapMode(true);
+        editor.resolvedOptions = {};
 
-		var session = editor.getSession();
-		session.setTabSize(2);
-		session.setUseSoftTabs(true);
+        editor.resolvedNames = {};
+        editor.resolvedNames[userPrefix] = true;    // Exposes default list.
+        var nameCompletions = contributorList;
+        var nameTrie = {};
 
+        editor.resolvedNodes = {};
+        editor.resolvedNodes[nodePrefix] = true;    // Exposes default list.
+        var nodeCompletions = nodeList;
+        var nodeTrie = {};
 
-		setDoc('ace');
+        function endsWith(str, suffix) {
+            return str.indexOf(suffix, str.length - suffix.length) !== -1;
+        }
 
-		var namefield = document.getElementById('namefield');
-		var fn = function() {
-			var docName = namefield.value;
+        function uniquify(array) {
+            var output = array.concat();
+            for(var i = 0; i < output.length; i++) {
+                for(var j = i+1; j < output.length; j++) {
+                    if(output[i].uid === output[j].uid)
+                        output.splice(j--, 1);
+                }
+            }
 
-			if (docName) {
-				setDoc(docName);
-			}
-		};
+            return output;
+        }
 
-		if (namefield.addEventListener) {
-			namefield.addEventListener('input', fn, false);
-		} else {
-			namefield.attachEvent('oninput', fn);
-		}
-	};
-		</script>
-	</body>
-</html>	
+        function prefixFailed(rootObj, str) {
+            // Base case: Prefix may yield results
+            if (str.length < 1)
+                return false;
+
+            var index = str[0];
+
+            if (rootObj[index] === false)
+                return true;
+
+            // Recurse down trie
+            if (!(index in rootObj))
+                rootObj[index] = {};
+            return prefixFailed(rootObj[index], str.substring(1));
+        }
+
+        function setTrieFalse(rootObj, str) {
+            // Base case: Set prefix value to false
+            if (str.length < 2) {
+                rootObj[str] = false;
+                return true;
+            }
+
+            var index = str[0];
+
+            // Prefix returned no results. This case will generally be avoided
+            // but can occur as a result of asynchronous requests
+            if (rootObj[index] === false){
+                return false;
+            }
+
+            // Recurse down trie
+            if (!(index in rootObj))
+                rootObj[index] = {};
+            return setTrieFalse(rootObj[index], str.substring(1));
+        }
+
+        var queryTimeout;
+        var numRequests = 0;
+        function setCompleter() {
+            var queryCompleter = {
+                getCompletions: function(editor, session, pos, prefix, callback) {
+
+                    console.log('evaluating completions for', prefix);
+                    editor.lastPrefix = prefix;
+
+                    var line = session.getLine(pos.row);
+                    line = line.substring(0, pos.column - prefix.length);
+
+                    if (endsWith(line, 'osf')) {
+                        editor.resolvedOptions[prefix] = true;
+                        editor.searchMode = 'options';
+                        callback(null, osfOptions);
+                    }
+
+                    else if (endsWith(line, 'project')) {
+                        editor.searchMode = 'node';
+
+                        if (prefix in editor.resolvedNodes || prefixFailed(nodeTrie, prefix)) {
+                            editor.resolvedNodes[prefix] = true;
+                            callback(null, nodeCompletions);
+                            return;
+                        }
+
+                        var url = 'http://localhost:5000/api/v1/search/?q=' + prefix.substring(1);
+
+                        clearTimeout(queryTimeout);
+                        queryTimeout = setTimeout(function () {
+                            numRequests++;
+                            console.time('Ajax');
+                            $.ajax({
+                                url: url,
+                                dataType: 'json',
+                                cache: false
+                            }).then(parseNodes).then(function (completions) {
+
+                                // Only act on the most recent request
+                                if (--numRequests > 0)
+                                    return;
+
+                                if (completions.length < 10) // We won't get more results
+                                    setTrieFalse(nodeTrie, prefix);
+                                editor.resolvedNodes[prefix] = true;
+                                nodeCompletions = uniquify(nodeCompletions.concat(completions));
+                                console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
+                                callback(null, nodeCompletions);
+                            });
+                        }, 400);
+                    }
+
+                    else if (endsWith(line, name)) {
+                        editor.searchMode = 'name';
+
+                        if (prefix in editor.resolvedNames || prefixFailed(nameTrie, prefix)) {
+                            editor.resolvedNames[prefix] = true;
+                            callback(null, nameCompletions);
+                            return;
+                        }
+
+                        var url = 'http://localhost:5000/api/v1/user/search/?query=' + prefix.substring(1);
+
+                        clearTimeout(queryTimeout);
+                        queryTimeout = setTimeout(function () {
+                            numRequests++;
+                            console.time('Ajax');
+                            $.ajax({
+                                url: url,
+                                dataType: 'json',
+                                cache: false
+                            }).then(parseUsers).then(function (completions) {
+
+                                // Only act on the most recent request
+                                if (--numRequests > 0)
+                                    return;
+
+                                if (completions.length < 10) // We won't get more results
+                                    setTrieFalse(nameTrie, prefix);
+                                editor.resolvedNames[prefix] = true;
+                                nameCompletions = uniquify(nameCompletions.concat(completions));
+                                console.log('-- JSON RETRIEVED:', prefix, '--\n', completions);
+                                callback(null, nameCompletions);
+                            });
+                        }, 400);
+                    }
+                }
+            };
+
+            editor.setOptions({enableCustomAutocompletion: [queryCompleter]});
+        }
+
+        var renderTimeout;
+        function onChange() {
+            // Uncomment to auto-render
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(renderCode, 3000);
+        }
+
+        // Initialize list
+        setCompleter();
+        editor.getSession().on('change', onChange);   // Render code on change
+
+//        renderCode();
+    }
+
+</script>

@@ -11,7 +11,7 @@
  */
 
 var block = {
-  toc: /^\[\[toc\]\]/, // Custom modules!
+  toc: /^\[\[toc\]\]/i, // Custom modules!
   newline: /^\n+/,
   code: /^( {4}[^\n]+\n*)+/,
   fences: noop,
@@ -173,9 +173,7 @@ Lexer.prototype.token = function(src, top, bq) {
     // toc
     if (cap = this.rules.toc.exec(src)) {
         src = src.substring(cap[0].length);
-        console.log(src);
         lexed = Lexer.lex(src);
-        console.log('lexed', lexed);
         var totalOutput = '## Table of Contents\n';
         for (var i in lexed) {
             if (lexed[i].type === "heading"){
@@ -186,7 +184,6 @@ Lexer.prototype.token = function(src, top, bq) {
                 var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
                 var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
                 totalOutput += output;
-                console.log(output);
             }
         }
         src = totalOutput + '\n' + src;
@@ -612,7 +609,6 @@ InlineLexer.prototype.output = function(src) {
     // osf
     if (cap = this.rules.osf.exec(src)) {
         src = src.substring(cap[0].length);
-        console.log('osf cap', cap);
         this.inLink = true;
         out += '<a href="localhost:5000/' + cap[2] + '"> OSF ' + cap[1] + '</a>';
         this.inLink = false;
