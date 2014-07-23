@@ -175,11 +175,18 @@ Lexer.prototype.token = function(src, top, bq) {
         src = src.substring(cap[0].length);
         lexed = Lexer.lex(src);
         var totalOutput = '## Table of Contents\n';
+        // Find maximum outdent
+        var min_header = 6;
+        for (var i in lexed) {
+            if (lexed[i].type === "heading") {
+                min_header = Math.min(min_header, lexed[i].depth);
+            }
+        }
         for (var i in lexed) {
             if (lexed[i].type === "heading"){
                 var h = lexed[i];
                 // Indent bullet based on header depth
-                var bullet = new Array((h.depth - 1) * 2 + 1).join(' ') + '* ';
+                var bullet = new Array((h.depth - min_header) * 2 + 1).join(' ') + '* ';
                 // id logic copied from heading section
                 var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
                 var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
