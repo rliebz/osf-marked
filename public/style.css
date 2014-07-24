@@ -43,7 +43,7 @@ body {
 }
 
 
-/* Cursor object. Purely visual*/
+/* Cursor object. Currently not used. */
 .ace_marker-layer .cursor {
     position: absolute;
     z-index: 4;

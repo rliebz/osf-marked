@@ -4,6 +4,7 @@
 <script src="../osf-language-tools.js"></script>
 <!--<script src="../node_modules/jquery/dist/jquery.min.js"></script>-->
 
+<!--The editor won't display unless you specify a height.-->
 <style type="text/css" media="screen">
     #editor {
         position: relative;
@@ -12,11 +13,11 @@
     }
 </style>
 
-
 <div id="editor">Loading...</div>
 
-<!--Good markdown overview. Currently hidden because I have no idea how-->
-<!--to load this into ace by default.-->
+<!--Good markdown overview. Currently hidden because I have no idea how
+to load this into ace by default when using ShareJS. All of this markdown
+should work in this example.-->
 <div style="display: none;">
 A Test for Markdown Rendering
 =========
@@ -81,19 +82,27 @@ if indent_exists_below:
 ```
 </div>
 
+<!--A button to render the markdown in case auto-rendering isn't enabled-->
 <button onclick="renderCode()">Render</button>
 
+<!-- Location where rendered code will appear -->
 <div id="rendered"></div>
 
+<!-- Necessary for ShareJS communication -->
 <script src="/channel/bcsocket.js"></script>
 <script src="/share/share.uncompressed.js"></script>
 <script src="/share/ace.js"></script>
+
+
 <script>
 
     var doc = null;
     var editor;
     var langTools = ace.require("ace/ext/language_tools");
 
+    // ShareJS supports multiple document backends per server based on key/
+    // value stores. It is possible to expose the document name to switch between
+    // different documents, like in a wiki.
     var setDoc = function(docName) {
 
 		editor.setReadOnly(true);
@@ -118,6 +127,7 @@ if indent_exists_below:
 		});
 	};
 
+    // Renders the markdown using custom marked
     function renderCode() {
         document.getElementById("rendered").innerHTML = marked(editor.getSession().doc.getValue());
     }
@@ -129,7 +139,7 @@ if indent_exists_below:
 
         setDoc('default');
 
-        // Settings
+        // AceJS editor cosmetic settings settings
         editor.getSession().setUseWrapMode(true);;  // Wrap text
         editor.getSession().setUseSoftTabs(true);   // Replace tabs with spaces
         editor.renderer.setShowGutter(false);       // Hides line numbers
@@ -137,10 +147,18 @@ if indent_exists_below:
         // Max caption width for autocomplete
         var MAX_CAPTION = 28;
 
+        // The character that actually triggers an auto-complete to begin.
+        // I haven't gotten it to work with different prefixes, but left
+        // them as separate variables in case I did. The idea would be
+        // something like '@' triggering a user, '?' triggering options, and so
+        // on, so that autocomplete could choose the appropriate list based on
+        // that contextual help.
         var userPrefix = ':';
         var nodePrefix = ':';
         var optionsPrefix = ':';
 
+        // Parses the result of an osf elasticsearch query and returns a list
+        // of completions.
         function parseUsers(data) {
             console.timeEnd('Ajax');
             var completions = [];
@@ -151,6 +169,9 @@ if indent_exists_below:
                 var user = users[i];
                 var shortName = (user.fullname.length > MAX_CAPTION) ?
                         user.fullname.substring(0, MAX_CAPTION - 3) + '...' : user.fullname;
+
+                // Completions match based on value, so the characters should
+                // line up with the caption. Values must also be unique
                 completions.push({
                     caption: ' ' + shortName,
                     value: userPrefix + user.fullname + user.id,
@@ -162,15 +183,21 @@ if indent_exists_below:
             return completions;
         }
 
+        // Parses the result of an osf elasticsearch query and returns a list
+        // of completions
         function parseNodes(data) {
             console.timeEnd('Ajax');
             var completions = [];
+
             for (var i in data.results) {
                 var p = data.results[i];
                 if (p.hasOwnProperty('contributors')) {
                     var uid = p.url.slice(1, -1);
                     var shortTitle = (p.title.length > MAX_CAPTION) ?
                             p.title.substring(0, MAX_CAPTION - 3) + '...' :  p.title;
+
+                    // Completions match based on value, so the characters should
+                    // line up with the caption. Values must also be unique
                     completions.push({
                         caption: ' ' + shortTitle,
                         value: nodePrefix + p.title + uid,
@@ -183,6 +210,7 @@ if indent_exists_below:
             return completions;
         }
 
+        // Presets for autocompletions follow
         var osfOptions = [{
             caption: ' Project',
             value: optionsPrefix + 'Project',
@@ -218,6 +246,7 @@ if indent_exists_below:
         var nodeList = parseNodes(nodeData);
 
 
+        // These variables are used for caching searches and results.
         editor.resolvedOptions = {};
 
         editor.resolvedNames = {};
@@ -230,10 +259,12 @@ if indent_exists_below:
         var nodeCompletions = nodeList;
         var nodeTrie = {};
 
+        // Find if one string ends with another
         function endsWith(str, suffix) {
             return str.indexOf(suffix, str.length - suffix.length) !== -1;
         }
 
+        // Removes duplicates from an array
         function uniquify(array) {
             var output = array.concat();
             for(var i = 0; i < output.length; i++) {
@@ -246,6 +277,9 @@ if indent_exists_below:
             return output;
         }
 
+        // Check if a query has been made on one of the string's prefixes
+        // that returned no results or few enough that a more specific query
+        // would return no novel results.
         function prefixFailed(rootObj, str) {
             // Base case: Prefix may yield results
             if (str.length < 1)
@@ -262,6 +296,7 @@ if indent_exists_below:
             return prefixFailed(rootObj[index], str.substring(1));
         }
 
+        // Indicate on a trie that a value has returned no/few enough results.
         function setTrieFalse(rootObj, str) {
             // Base case: Set prefix value to false
             if (str.length < 2) {
@@ -284,26 +319,30 @@ if indent_exists_below:
         }
 
         var queryTimeout;
-        var numRequests = 0;
+        var numRequests = 0; // Keep track of all requests so we only resolve 1
         function setCompleter() {
             var queryCompleter = {
                 getCompletions: function(editor, session, pos, prefix, callback) {
 
-                    console.log('evaluating completions for', prefix);
                     editor.lastPrefix = prefix;
 
                     var line = session.getLine(pos.row);
                     line = line.substring(0, pos.column - prefix.length);
 
+                    // Case where the query is [[osf:
+                    // We know our options are user/project, so we don't have
+                    // to do any request to the server
                     if (endsWith(line, 'osf')) {
                         editor.resolvedOptions[prefix] = true;
                         editor.searchMode = 'options';
                         callback(null, osfOptions);
                     }
 
+                    // Searching projects
                     else if (endsWith(line, 'project')) {
                         editor.searchMode = 'node';
 
+                        // We don't have to make a query
                         if (prefix in editor.resolvedNodes || prefixFailed(nodeTrie, prefix)) {
                             editor.resolvedNodes[prefix] = true;
                             callback(null, nodeCompletions);
@@ -336,9 +375,11 @@ if indent_exists_below:
                         }, 400);
                     }
 
-                    else if (endsWith(line, name)) {
+                    // Searching users
+                    else if (endsWith(line, 'user')) {
                         editor.searchMode = 'name';
 
+                        // We don't have to make a query
                         if (prefix in editor.resolvedNames || prefixFailed(nameTrie, prefix)) {
                             editor.resolvedNames[prefix] = true;
                             callback(null, nameCompletions);
@@ -378,7 +419,7 @@ if indent_exists_below:
 
         var renderTimeout;
         function onChange() {
-            // Uncomment to auto-render
+            // Auto-rendering
             clearTimeout(renderTimeout);
             renderTimeout = setTimeout(renderCode, 3000);
         }
@@ -386,8 +427,6 @@ if indent_exists_below:
         // Initialize list
         setCompleter();
         editor.getSession().on('change', onChange);   // Render code on change
-
-//        renderCode();
     }
 
 </script>
