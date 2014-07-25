@@ -182,15 +182,19 @@ Lexer.prototype.token = function(src, top, bq) {
                 min_header = Math.min(min_header, lexed[i].depth);
             }
         }
+        var last_valid_header = 0;
         for (var i in lexed) {
             if (lexed[i].type === "heading"){
                 var h = lexed[i];
-                // Indent bullet based on header depth
-                var bullet = new Array((h.depth - min_header) * 2 + 1).join(' ') + '* ';
-                // id logic copied from heading section
-                var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
-                var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
-                totalOutput += output;
+                if (h.depth < last_valid_header + 2) { // Only show proper hierarchy
+                    last_valid_header = h.depth;
+                    // Indent bullet based on header depth
+                    var bullet = new Array((h.depth - min_header) * 2 + 1).join(' ') + '* ';
+                    // id logic copied from heading section
+                    var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
+                    var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
+                    totalOutput += output;
+                }
             }
         }
         src = totalOutput + '\n' + src;

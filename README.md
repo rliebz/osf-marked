@@ -55,8 +55,8 @@ The custom markdown includes:
    can be used for any arbitrary OSF page, such as @[OSF Settings](settings) or
    @[OSF Wiki](uid/wiki)
  - [[TOC]] will render a table of contents that organizes headers and links to
-   them on the page. This is case-insensitive, but will fail for header gaps
-   larger than 3 (e.g., an h5 directly following an h1)
+   them on the page. This is case-insensitive. Headers not structured properly
+   (e.g., an h3 following an h1) will be omitted.
    
    
 ### ShareJS ###
