@@ -170,30 +170,41 @@ Lexer.prototype.token = function(src, top, bq) {
       }
     }
 
-    // toc
+    // toc (Builds for subsection based on header depth)
     if (cap = this.rules.toc.exec(src)) {
         src = src.substring(cap[0].length);
-        lexed = Lexer.lex(src);
+        var lexed = Lexer.lex(src);
         var totalOutput = '## Table of Contents\n';
-        // Find maximum outdent
-        var min_header = 6;
-        for (var i in lexed) {
+        // Scan once to determine which headers should be included
+        var min_header; // Lowest header depth in table
+        var num_lexed_to_scan = lexed.length;
+        for (i in lexed) {
             if (lexed[i].type === "heading") {
-                min_header = Math.min(min_header, lexed[i].depth);
+                // Don't include headers with depths lower than first item
+                // This logic allows TOC to remain within a scope
+                if (min_header === undefined) {
+                    min_header = lexed[i].depth;
+                }
+                else if (lexed[i].depth < min_header) {
+                    num_lexed_to_scan = i;
+                    break;
+                }
             }
         }
-        var last_valid_header = 0;
-        for (var i in lexed) {
+        // Scan again and add markdown table to source
+        var last_valid_header = min_header;
+        for (i = 0; i < num_lexed_to_scan; i++) {
             if (lexed[i].type === "heading"){
                 var h = lexed[i];
-                if (h.depth < last_valid_header + 2) { // Only show proper hierarchy
+                // Only allow indentations one level deeper than current header
+                if (h.depth < last_valid_header + 2) {
                     last_valid_header = h.depth;
                     // Indent bullet based on header depth
                     var bullet = new Array((h.depth - min_header) * 2 + 1).join(' ') + '* ';
                     // id logic copied from heading section
                     var id = h.text.toLowerCase().replace(/[^\w]+/g, '-');
-                    var output = bullet + '[' + h.text + '](#' + id + ')' + '\n';
-                    totalOutput += output;
+                    // Append item with link to header
+                    totalOutput += bullet + '[' + h.text + '](#' + id + ')' + '\n';
                 }
             }
         }
@@ -630,7 +641,7 @@ InlineLexer.prototype.output = function(src) {
     if (cap = this.rules.youtube.exec(src)) {
         src = src.substring(cap[0].length);
         this.inLink = true;
-        out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + cap[1] + '" frameborder="0" allowfullscreen></iframe>'
+        out += '<iframe width="550" height="309" src="//www.youtube.com/embed/' + cap[1] + '" frameborder="0" allowfullscreen></iframe>';
         this.inLink = false;
         continue;
     }

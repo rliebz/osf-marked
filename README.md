@@ -56,7 +56,9 @@ The custom markdown includes:
    @[OSF Wiki](uid/wiki)
  - [[TOC]] will render a table of contents that organizes headers and links to
    them on the page. This is case-insensitive. Headers not structured properly
-   (e.g., an h3 following an h1) will be omitted.
+   (e.g., an h3 following an h1) will be omitted. A table of contents will only
+   annotate the section of the document that it is in, meaning if it is placed
+   immediately before an h3, it will break as soon as it reaches an h1 or h2.
    
    
 ### ShareJS ###
