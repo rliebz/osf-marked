@@ -1,0 +1,79 @@
+<script src="/static/share.js"></script>
+<script src="/static/textarea.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+<br/>
+<textarea id="wikiText" autofocus cols="100" rows="50"></textarea>
+
+<script>
+//Thank you https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+String.prototype.hash = function() {
+    var hash = 0,
+        i, chr, len;
+    if (this.length == 0) return hash;
+    for (i = 0, len = this.length; i < len; i++) {
+        chr = this.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+};
+
+var model = function() {
+    var self = this;
+    self.hash = '';
+    self.title = '{{title}}';
+    self.elem = document.getElementById('wikiText');
+    self.share = new sharejs.Connection('ws://localhost:7007/');
+
+    self.save = function() {
+        if (self.doc.getText().hash() !== self.hash) {
+            $.ajax({
+                url: '/api/v1/page/' + self.title,
+                method: 'PUT',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    content: self.doc.getText().split('\n')
+                })
+            });
+            self.hash = self.doc.getText().hash();
+        }
+    };
+
+    self.load = function() {
+        $.ajax({
+            url: '/api/v1/page/' + self.title,
+            method: 'GET',
+            success: function(data) {
+                if (self.doc.getText() !== data.content) {
+                    self.doc.del(0, self.doc.getLength());
+                    self.doc.insert(0, data.content);
+                    self.doc.submitOp()
+                }
+                self.hash = self.doc.getText().hash();
+            }
+        });
+    };
+
+    self.loadDocument = function() {
+        if (self.doc === undefined || self.doc.name !== self.title) {
+            self.share.open(self.title, 'text', function(error, doc) {
+                if (error) {
+                    console.error(error);
+                    return;
+                }
+                self.doc = doc;
+                self.doc.attach_textarea(self.elem);
+                self.load();
+                return;
+            });
+        }
+    };
+
+    self.loadDocument()
+    self.intervalID = window.setInterval(self.save, 5000);
+}
+
+window.viewModel = new model();
+</script>
