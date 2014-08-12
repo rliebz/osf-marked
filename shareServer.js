@@ -2,7 +2,7 @@ var connect = require('connect'),
     sharejs = require('share').server;
 
 var server = connect(connect.logger());
-var options = {db: {type: 'none'}, websocket: true}; // See docs for options. {type: 'redis'} to enable persistance.
+var options = {db: {type: 'none'}, sockjs: true}; // See docs for options. {type: 'redis'} to enable persistance.
 
 // Attach the sharejs REST and Socket.io interfaces to the server
 sharejs.attach(server, options);
