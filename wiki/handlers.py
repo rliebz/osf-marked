@@ -108,6 +108,7 @@ class WebSocketAPIEmulator(sockjs.tornado.SockJSConnection):
 
         if not page:
             page = WikiPage(title=title)
+            page.save()
 
         self.put(title, content)
 
