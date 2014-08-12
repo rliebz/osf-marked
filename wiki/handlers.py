@@ -39,7 +39,7 @@ class WikiCrudHandler(BaseHandler):
             else:
                 self.write({'content': page.content})
         else:
-            self.write({'content': []})
+            self.write({'content': ''})
 
     def post(self, page_name):
         opts = json.loads(self.request.body)
