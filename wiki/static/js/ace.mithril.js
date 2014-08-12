@@ -5,7 +5,7 @@ var aceEditor = {
         self.doc = null;
         self.editor = null;
 
-        self.share = new sharejs.Connection('ws://localhost:7007/');
+        self.share = new sharejs.Connection('http://localhost:7007/');
 
 
         self.config = function(element, isInitialized) {
@@ -46,7 +46,16 @@ var aceEditor = {
 
                 self.doc.attach_ace(self.editor);
                 self.editor.setReadOnly(false);
+                self.editor.session.getUndoManager().markClean()
             });
+        };
+
+        self.setClean = function() {
+            self.editor.session.getUndoManager().markClean()
+        }
+
+        self.hasChanged = function() {
+            return !self.editor.session.getUndoManager().isClean();
         };
 
         self.getText = function() {
@@ -56,7 +65,7 @@ var aceEditor = {
 
         self.markUp = function(){
             return m.trust(marked(self.getText()));
-        }
+        };
     },
 
     view: function(ctrl) {

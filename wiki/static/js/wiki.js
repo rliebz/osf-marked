@@ -54,11 +54,14 @@ var wiki = {
         var self = this;
 
         self.requestedPage = m.prop('')
-        self.currentPage =  null; //new wiki.Page('test');
+        self.currentPage =  null;
         self.editor = new aceEditor.controller();
 
         self.save = function() {
-            w.savePage(self.requestedPage(), self.editor.getText().split('\n'));
+            if (self.editor.hasChanged()) {
+                w.savePage(self.requestedPage(), self.editor.getText().split('\n'));
+                self.editor.setClean();
+            }
         }.bind(self);
 
         self.load = function() {
@@ -67,6 +70,8 @@ var wiki = {
 
             self.currentPage = new wiki.Page(self.requestedPage(), self.editor.setPage);
         }.bind(self);
+
+         self.intervalID = window.setInterval(self.save, 5000);
     },
     view: function(ctrl) {
         return m('div', [
