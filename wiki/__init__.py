@@ -18,4 +18,4 @@ def gather_routes():
         klass.to_route()
         for klass in
         BaseHandler.__subclasses__()
-    ] + [static_files()]
+    ] + extra_routes()

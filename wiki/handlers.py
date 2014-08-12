@@ -2,6 +2,8 @@ import json
 
 import tornado.web
 
+import sockjs.tornado
+
 from modularodm.exceptions import NoResultsFound
 from modularodm.query.querydialect import DefaultQueryDialect as Q
 
@@ -12,8 +14,10 @@ STATIC_PATH = r'/static/(.*)'
 STATIC_DIR = 'wiki/static'
 
 
-def static_files():
-    return STATIC_PATH, tornado.web.StaticFileHandler, {'path': STATIC_DIR}
+def extra_routes():
+    router = sockjs.tornado.SockJSRouter(WebSocketAPIEmulator, '/sock')
+    static = (STATIC_PATH, tornado.web.StaticFileHandler, {'path': STATIC_DIR})
+    return [static] + router.urls
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -73,3 +77,56 @@ class IndexHandler(BaseHandler):
 
     def get(self, path):
         self.render('static/index.html', title=path)
+
+
+class WebSocketAPIEmulator(sockjs.tornado.SockJSConnection):
+    participants = set()
+
+    def on_open(self, info):
+        # Add client to the clients list
+        self.participants.add(self)
+
+    def on_message(self, message):
+        msg = json.loads(message)
+
+        if msg['method'] == 'GET':
+            self.get(msg['page'])
+        elif msg['method'] == 'POST':
+            self.post(msg['page'], msg.get('content', ''))
+        elif msg['method'] == 'PUT':
+            self.put(msg['page'], msg['content'])
+
+    def get(self, title):
+        page = self.load_page(title)
+
+        if not page:
+            return self.send({'content': ''})
+        return self.send({'content': page.content})
+
+    def post(self, title, content):
+        page = self.load_page(title)
+
+        if not page:
+            page = WikiPage(title=title)
+
+        self.put(title, content)
+
+    def put(self, title, content):
+        page = self.load_page(title)
+
+        if not page:
+            self.post(title, content)
+
+        version = WikiPageVersion(text=content)
+        version.save()
+        page.versions.append(version)
+        page.save()
+
+    def on_close(self):
+        self.participants.remove(self)
+
+    def load_page(self, page_name):
+        try:
+            return WikiPage.find_one(Q('title', 'eq', page_name))
+        except NoResultsFound:
+            return None
