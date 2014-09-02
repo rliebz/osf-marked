@@ -1,0 +1,3 @@
+ws
+share@"<0.7"
+connect@"<2.0.0"
